@@ -1,6 +1,10 @@
 #!/bin/sh
 # ============================================================
-# AutoPortraiture Export Action for Lightroom Classic
+# LrEAS — Lightroom Export Auto Script
+#
+# 通用 Photoshop 后处理自动化脚本：
+#   LR 导出 JPEG 后自动调用 Photoshop 回放预录 Action，
+#   执行任意滤镜/插件处理，另存为新文件并清理原文件。
 #
 # 工作流程：
 #   1. LR 导出 JPEG 后，将文件路径作为 $1 传给本脚本
@@ -9,14 +13,14 @@
 #   4. 脚本删除原始 JPEG 和临时 PSD（如有）
 #
 # 滤镜调用方式：
-#   通过 app.doAction(actionName, actionSet) 回放预录的 PS Action
-#   需要先在 PS 中录制一个包含 Portraiture 步骤的 Action
+#   通过 app.doAction(ACTION_NAME, ACTION_SET) 回放预录的 PS Action
+#   用户需在 PS 中录制包含目标滤镜步骤的 Action
 #
 # 录制 Action 步骤：
 #   1. PS 中打开任意照片
-#   2. 窗口 → 动作，新建 Action（命名如 "Portraiture"），放入 Action Set（如 "AutoPortraiture"）
+#   2. 窗口 → 动作，新建 Action Set 和 Action
 #   3. 开始录制
-#   4. 滤镜 → Imagenomic → Portraiture 3/4
+#   4. 执行目标滤镜/插件操作（如 Portraiture、Nik Collection、Topaz 等）
 #   5. 调整参数，点确定
 #   6. 停止录制
 # ============================================================
@@ -34,14 +38,14 @@ JPEG_QUALITY=12
 # ================================================
 
 INPUT_FILE="$1"
-LOGFILE="$HOME/Desktop/autoportraiture.log"
+LOGFILE="$HOME/Desktop/lreas.log"
 
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') | $1" >> "$LOGFILE"
 }
 
 notify() {
-    osascript -e "display notification \"$1\" with title \"AutoPortraiture\" $2" 2>/dev/null
+    osascript -e "display notification \"$1\" with title \"LrEAS\" $2" 2>/dev/null
 }
 
 log "=== Export Action called ==="
@@ -67,7 +71,7 @@ OUTPUT_FILE="$DIRNAME/${FILENAME}_${ACTION_NAME}.jpg"
 log "Output: $OUTPUT_FILE"
 notify "Processing: $BASENAME..."
 
-JSX_FILE="/tmp/ap_portraiture_$$.jsx"
+JSX_FILE="/tmp/lreas_$$.jsx"
 cat > "$JSX_FILE" << JSXEND
 (function() {
     var inputFile = "$INPUT_FILE";
@@ -98,7 +102,7 @@ cat > "$JSX_FILE" << JSXEND
         if (bgLayer) bgLayer.duplicate();
     } catch (e) {}
 
-    // --- Step 3: 回放 Action（调用 Portraiture） ---
+    // --- Step 3: 回放 Action ---
     try {
         app.doAction(actionName, actionSet);
         $.writeln("Action applied: " + actionSet + "/" + actionName);
@@ -121,14 +125,14 @@ cat > "$JSX_FILE" << JSXEND
     doc.close(SaveOptions.DONOTSAVECHANGES);
 
     app.displayDialogs = DialogModes.ALL;
-    $.writeln("AutoPortraiture: Done");
+    $.writeln("LrEAS: Done");
 })();
 JSXEND
 
 log "JSX script created (action=$ACTION_SET/$ACTION_NAME)"
 
 # 创建 AppleScript 启动文件
-ASCPT_FILE="/tmp/ap_launch_$$.scpt"
+ASCPT_FILE="/tmp/lreas_launch_$$.scpt"
 python3 -c "
 scpt = 'tell application \"Adobe Photoshop $PS_VERSION\"\n'
 scpt += '  activate\n'

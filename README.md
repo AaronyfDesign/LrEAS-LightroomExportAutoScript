@@ -1,98 +1,129 @@
 # LrEAS — Lightroom Export Auto Script
 
-> LR 导出 JPEG → Photoshop 回放 Action 调用任意滤镜/插件 → 另存为 `<原文件名>_<ACTION_NAME>.jpg` → 清理原文件。  
-> 全程自动，通用 PS 后处理自动化框架，支持 Portraiture、Nik Collection、Topaz 等任何可录制 Action 的插件。
+> LR exports JPEG → Photoshop replays Action to apply any filter/plugin → saves as `<filename>_<ACTION_NAME>.jpg` → cleans up original.  
+> Fully automated, universal PS post-processing framework. Supports Portraiture, Nik Collection, Topaz, or any plugin that can be recorded as a Photoshop Action.
 
-## 项目定位
+## Overview
 
-LrEAS 是一个轻量的 Lightroom 导出后处理自动化框架。它不绑定特定滤镜或插件——用户在 Photoshop 中录制任意 Action（包含滤镜操作步骤），在脚本 CONFIG 中填入 Action 名称，即可在 Lightroom 导出后自动执行 PS 处理流程。
+LrEAS is a lightweight Lightroom export post-processing automation framework. It is not tied to any specific filter or plugin — the user records an arbitrary Action in Photoshop (containing filter operation steps), fills in the Action name in the script CONFIG, and the PS processing flow executes automatically after Lightroom export.
 
-**已有实例化分支：**
+**Profile branches:**
 
-| 分支 | 场景 | 说明 |
+| Branch | Scenario | Description |
 | --- | --- | --- |
-| `profile/autoportraiture` | Imagenomic Portraiture 磨皮 | Portraiture 专用配置实例 |
-| `main` | 通用框架 | 默认通用脚本，用户自行录制 Action 后配置 |
+| `profile/autoportraiture` | Imagenomic Portraiture retouching | Portraiture-specific configuration instance |
+| `main` | Generic framework | Default script, user records Action and configures |
 
-## 适配环境
+## Compatibility
 
-| 组件 | 已测试版本 | 未测试版本 |
+| Component | Tested Versions | Untested |
 | --- | --- | --- |
-| Adobe Photoshop | 2024、2025、2026 | 其余版本 |
+| Adobe Photoshop | 2024, 2025, 2026 | Others |
 | Lightroom Classic | 14.x | — |
-| macOS | 15.x (Apple Silicon) | Intel / 其他 |
+| macOS | 15.x (Apple Silicon) | Intel / others |
+| Windows | Pending testing | Win10+ theoretically supported |
 
-> **注意**：`AutoPortraiture.lrplugin/` 目录为已弃用（deprecated）的 Lightroom SDK Lua 插件，不再维护。当前方案使用 `scripts/LrEAS.sh` 导出操作脚本。
+| Platform | Script | PS Bridge | Notification | Tested |
+| --- | --- | --- | --- | --- |
+| macOS | `LrEAS.sh` | AppleScript → `do javascript` | macOS Notification Center | ✓ |
+| Windows | `LrEAS.bat` | PowerShell COM → `DoJavaScript` | None (log only) | Pending |
 
-## 工作原理
+> **Note:** `AutoPortraiture.lrplugin/` is a deprecated Lightroom SDK Lua plugin, no longer maintained. The current solution uses the export action scripts in `scripts/`.
 
-1. 在 Lightroom 导出对话框的"导出后"下拉菜单中选择 `LrEAS.sh`
-2. LR 将导出的 JPEG 路径传给脚本
-3. 脚本通过 AppleScript 调起 Photoshop，执行 JSX 脚本
-4. JSX 脚本用 `app.doAction(actionName, actionSet)` 回放预录的 Action
-5. 另存为 `<原文件名>_<ACTION_NAME>.jpg`，删除原始 JPEG 和临时 PSD
-6. macOS 通知提示完成
+## How It Works
 
-## 目录结构
+1. Select the script in Lightroom's Export dialog under "Post-Processing After Export" (macOS: `LrEAS.sh` / Windows: `LrEAS.bat`)
+2. LR passes the exported JPEG path to the script
+3. The script launches Photoshop and executes JSX (macOS via AppleScript, Windows via PowerShell COM)
+4. JSX replays the pre-recorded Action via `app.doAction(actionName, actionSet)`
+5. Saves as `<filename>_<ACTION_NAME>.jpg`, deletes the original JPEG and temp PSD
+6. macOS shows a notification / Windows logs to file
+
+## Repository Structure
 
 ```
 LrEAS/
 ├── scripts/
-│   └── LrEAS.sh                    # 主脚本（Shell → AppleScript → JSX）
+│   ├── LrEAS.sh                    # macOS script (Shell → AppleScript → JSX)
+│   └── LrEAS.bat                   # Windows script (Batch → PowerShell COM → JSX)
 ├── docs/
-│   ├── usage.md                    # 详细使用指南
-│   └── troubleshooting.md          # 排错记录（deprecated，历史参考）
-├── AutoPortraiture.lrplugin/        # deprecated：LR SDK Lua 插件，不再维护
+│   ├── usage.md                    # Detailed usage guide
+│   └── troubleshooting.md          # Troubleshooting notes (deprecated, historical reference)
+├── AutoPortraiture.lrplugin/        # deprecated: LR SDK Lua plugin
 ├── LICENSE
 ├── README.md
 └── .gitignore
 ```
 
-## 快速开始
+## Quick Start
+
+### macOS
 
 ```bash
-# 1. 复制脚本到 LR Export Actions 目录
+# 1. Copy script to LR Export Actions directory
 cp scripts/LrEAS.sh ~/Library/Application\ Support/Adobe/Lightroom/Export\ Actions/
 chmod +x ~/Library/Application\ Support/Adobe/Lightroom/Export\ Actions/LrEAS.sh
 
-# 2. 在 PS 中录制 Action（详见 docs/usage.md）
+# 2. Record an Action in PS (see docs/usage.md)
 
-# 3. 在 LR 导出对话框中，"导出后"选择 LrEAS.sh
+# 3. In LR Export dialog, select LrEAS.sh under "Post-Processing"
 ```
 
-需要在 Photoshop 中预先录制一个包含目标滤镜步骤的 Action。不同场景的录制示例见 [docs/usage.md](docs/usage.md)。
+### Windows
 
-## 配置
+```bat
+:: 1. Copy script to LR Export Actions directory
+copy scripts\LrEAS.bat "%APPDATA%\Adobe\Lightroom\Export Actions\"
 
-编辑 `scripts/LrEAS.sh` 顶部的 CONFIG 区域：
+:: 2. Record an Action in PS (see docs/usage.md)
+
+:: 3. In LR Export dialog, select LrEAS.bat under "Post-Processing"
+```
+
+A Photoshop Action containing the target filter steps must be pre-recorded. See [docs/usage.md](docs/usage.md) for recording examples.
+
+## Configuration
+
+### macOS (`scripts/LrEAS.sh`)
 
 ```bash
-# Action 名称和 Action Set 名称（需与 PS 中录制的一致）
+# Action name and Action Set name (must match what's recorded in PS)
 ACTION_NAME="Portraiture"
 ACTION_SET="AutoPortraiture"
 
-# Photoshop 版本（已测试：2024、2025、2026，其余版本未测试）
+# Photoshop version (tested: 2024, 2025, 2026, others untested)
 PS_VERSION="2025"
 
-# 输出 JPEG 质量 (1-12, 12 = 最高)
+# Output JPEG quality (1-12, 12 = highest)
 JPEG_QUALITY=12
 ```
 
-输出文件名为 `<原文件名>_<ACTION_NAME>.jpg`。例如 `ACTION_NAME="Portraiture"` 时，`AYF_5412.jpg` 的输出为 `AYF_5412_Portraiture.jpg`。
+### Windows (`scripts/LrEAS.bat`)
 
-切换后处理场景只需改 `ACTION_NAME` 和 `ACTION_SET` 两行，指向不同的 PS Action。
+```bat
+set ACTION_NAME=Portraiture
+set ACTION_SET=AutoPortraiture
+set JPEG_QUALITY=12
+```
 
-## 技术要点
+Windows does not require `PS_VERSION` — PowerShell COM auto-detects the installed Photoshop instance.
 
-滤镜调用使用 `app.doAction(actionName, actionSet)` 回放预录的 Photoshop Action。Action 中录制了完整的滤镜操作步骤（包括参数设置），回放时自动执行。
+Output filename is `<original_filename>_<ACTION_NAME>.jpg`. For example, with `ACTION_NAME="Portraiture"`, `AYF_5412.jpg` outputs `AYF_5412_Portraiture.jpg`.
 
-| 维度 | 说明 |
-| --- | --- |
-| 依赖 | 需在 PS 中预录 Action（包含目标滤镜步骤） |
-| 参数 | 录制时锁定（如需调参需重新录制） |
-| 切换场景 | 改 `ACTION_NAME`/`ACTION_SET` 指向不同 Action |
-| 对话框 | `app.displayDialogs = DialogModes.NO` 抑制 PS 自身对话框 |
-| PS 版本 | 通过 `PS_VERSION` 配置，已测试 2024/2025/2026 |
-| 日志 | `~/Desktop/lreas.log` |
+Switching post-processing scenarios only requires changing `ACTION_NAME` and `ACTION_SET` to point to a different PS Action.
 
-详细使用说明见 [docs/usage.md](docs/usage.md)。
+## Technical Notes
+
+Filter invocation uses `app.doAction(actionName, actionSet)` to replay a pre-recorded Photoshop Action. The Action contains the complete filter operation steps (including parameter settings) and executes automatically on playback. The JSX core logic is identical across platforms — only the script shell differs.
+
+| Aspect | macOS | Windows |
+| --- | --- | --- |
+| Script shell | Shell (`LrEAS.sh`) | Batch (`LrEAS.bat`) |
+| PS bridge | AppleScript `do javascript` | PowerShell COM `DoJavaScript` |
+| PS version config | `PS_VERSION` variable | COM auto-detect |
+| Notification | macOS Notification Center | None (log only) |
+| Log file | `~/Desktop/lreas.log` | `%USERPROFILE%\Desktop\lreas.log` |
+| JSX code | Identical | Identical |
+| Dependencies | Built into macOS | PowerShell 5.1+ (included with Win10) |
+
+See [docs/usage.md](docs/usage.md) for detailed instructions.

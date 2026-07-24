@@ -1,5 +1,7 @@
 # LrEAS — Lightroom Export Auto Script
 
+> English | [中文](README_zh.md)
+
 > LR exports JPEG → Photoshop replays Action to apply any filter/plugin → saves as `<filename>_<ACTION_NAME>.jpg` → cleans up original.  
 > Fully automated, universal PS post-processing framework. Supports Portraiture, Nik Collection, Topaz, or any plugin that can be recorded as a Photoshop Action.
 
